@@ -8,6 +8,7 @@ import java.lang.*;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
 import java.net.*;
@@ -406,11 +407,125 @@ public class theRobot extends JFrame {
     //       To do this, you should update the 2D-array "probs"
     // Note: sonars is a bit string with four characters, specifying the sonar reading in the direction of North, South, East, and West
     //       For example, the sonar string 1001, specifies that the sonars found a wall in the North and West directions, but not in the South and East directions
-    void updateProbabilities(int action, String sonars) {
-        // your code
+      void updateProbabilities(int action, String sonars) {
+          // your code
+          double[][] norm = new double[mundo.width][mundo.height];
 
-        myMaps.updateProbs(probs); // call this function after updating your probabilities so that the
-                                   //  new probabilities will show up in the probability map on the GUI
+          ArrayList<Double> temp = new ArrayList<>();
+
+          for (int y = 0; y < mundo.height; y++) {
+              for (int x = 0; x < mundo.width; x++) {
+                  if (mundo.grid[x][y] != 1 && mundo.grid[x][y] != 2) {
+                      int[] currState = {x, y};
+                      double transition = transitionModel(currState, action);
+                      double sensor = sensorModel(currState, sonars);
+                      norm[x][y] = transition * sensor;
+                      temp.add(transition * sensor);
+                  }
+              }
+          }
+
+          double sum = 0;
+          for (Double d : temp) {
+              sum += d;
+          }
+          double normal = sum / temp.size();
+
+          for (int y = 0; y < mundo.height; y++) {
+              for (int x = 0; x < mundo.width; x++) {
+                  probs[x][y] = norm[x][y]/normal;
+              }
+          }
+
+          myMaps.updateProbs(probs); // call this function after updating your probabilities so that the
+          //  new probabilities will show up in the probability map on the GUI
+      }
+
+    double transitionModel(int[] currState, int action) {
+        double prob = 0;
+        double wrongProb = (1 - moveProb) / 4;
+        int[] prevState = {0, 0};
+        double option = 0;
+        for (int i = 0; i < 5; i++) {
+            //check all states around current, including self
+            int prev = 0;
+            switch (i) {
+                case 0:
+                    prevState[0] = currState[0]-1; //left
+                    prevState[1] = currState[1];
+                    option = mundo.grid[prevState[0]+1][prevState[1]] == 0 || mundo.grid[prevState[0]+1][prevState[1]] == 3 ? 1 : 0;
+                    prev = 2;
+                    break;
+                case 1:
+                    prevState[0] = currState[0]; //up
+                    prevState[1] = currState[1]-1;
+                    option = mundo.grid[prevState[0]][prevState[1]+1] == 0  ||  mundo.grid[prevState[0]][prevState[1]+1] == 3 ? 1 : 0;
+                    prev = 1;
+                    break;
+                case 2:
+                    prevState[0] = currState[0]+1; //right
+                    prevState[1] = currState[1];
+                    option = mundo.grid[prevState[0]-1][prevState[1]] == 0 || mundo.grid[prevState[0]-1][prevState[1]] == 3 ? 1 : 0;
+                    prev = 3;
+                    break;
+                case 3:
+                    prevState[0] = currState[0]; //down
+                    prevState[1] = currState[1]+1;
+                    option = mundo.grid[prevState[0]][prevState[1]-1] == 0  ||  mundo.grid[prevState[0]][prevState[1]-1] == 3 ? 1 : 0;
+                    prev = 0;
+                    break;
+                case 4:
+                    prevState[0] = currState[0]; //stay
+                    prevState[1] = currState[1];
+                    double left = mundo.grid[prevState[0]-1][prevState[1]] == 1 ? 1 : 0;
+                    double up = mundo.grid[prevState[0]][prevState[1]-1] == 1 ? 1 : 0;
+                    double right = mundo.grid[prevState[0]+1][prevState[1]] == 1 ? 1 : 0;
+                    double down = mundo.grid[prevState[0]][prevState[1]+1] == 1 ? 1 : 0;
+                    double stay = 1;
+                    switch (action) {
+                        case 0:
+                            prob += moveProb * up  + ((wrongProb * (left + right + down + stay))) * probs[prevState[0]][prevState[1]];
+                            break;
+                        case 1:
+                            prob += moveProb * down + ((wrongProb * (left + right + up + stay))) * probs[prevState[0]][prevState[1]];
+                            break;
+                        case 2:
+                            prob += moveProb * right + ((wrongProb * (left + up + down + stay))) * probs[prevState[0]][prevState[1]];
+                            break;
+                        case 3:
+                            prob += moveProb * left + ((wrongProb * (up + right + down + stay))) * probs[prevState[0]][prevState[1]];
+                            break;
+                        case 4:
+                            prob += moveProb * stay + ((wrongProb * (left + right + down + up))) * probs[prevState[0]][prevState[1]];
+                            break;
+                    }
+                    prev = 4;
+                    break;
+            }
+
+
+            if (prev == 4) { //stay special case
+                continue;
+            }
+            else if (prev == action) { //move correctly
+                prob += (moveProb * probs[prevState[0]][prevState[1]]);
+                continue;
+            }
+            else { //move incorrectly
+                prob += option * wrongProb * probs[prevState[0]][prevState[1]];
+            }
+        }
+
+        return prob;
+    }
+
+    double sensorModel(int[] currState, String sonars) {
+        double result = 1;
+        result *= mundo.grid[currState[0]][currState[1]-1] == Character.getNumericValue(sonars.charAt(0)) ? sensorAccuracy : 1 - sensorAccuracy;
+        result *= mundo.grid[currState[0]][currState[1]+1] == Character.getNumericValue(sonars.charAt(1)) ? sensorAccuracy : 1 - sensorAccuracy;
+        result *= mundo.grid[currState[0]+1][currState[1]] == Character.getNumericValue(sonars.charAt(2)) ? sensorAccuracy : 1 - sensorAccuracy;
+        result *= mundo.grid[currState[0]-1][currState[1]] == Character.getNumericValue(sonars.charAt(3)) ? sensorAccuracy : 1 - sensorAccuracy;
+        return result;
     }
 
 
