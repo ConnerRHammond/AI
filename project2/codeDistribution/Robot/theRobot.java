@@ -410,16 +410,19 @@ public class theRobot extends JFrame {
     void updateProbabilities(int action, String sonars) {
         // your code
         probs = new double[mundo.width][mundo.height];
+        double[][] norm = new double[mundo.width][mundo.height];
 
         ArrayList<Double> temp = new ArrayList<>();
 
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
-                int[] currState = {x, y};
-                double transition = transitionModel(currState, action);
-                double sensor = sensorModel(currState, sonars);
-                probs[x][y] = transition * sensor;
-                temp.add(transition * sensor);
+                if (mundo.grid[x][y] != 1 && mundo.grid[x][y] != 2) {
+                    int[] currState = {x, y};
+                    double transition = transitionModel(currState, action);
+                    double sensor = sensorModel(currState, sonars);
+                    norm[x][y] = transition * sensor;
+                    temp.add(transition * sensor);
+                }
             }
         }
 
@@ -431,7 +434,7 @@ public class theRobot extends JFrame {
 
         for (int y = 0; y < mundo.height; y++) {
             for (int x = 0; x < mundo.width; x++) {
-                probs[x][y] = probs[x][y]/normal;
+                probs[x][y] = norm[x][y]/normal;
             }
         }
 

@@ -15,7 +15,8 @@
 			"name": "BayesWorld",
 			"request": "launch",
 			"mainClass": "BayesWorld",
-			"projectName": "AI_e139adfb"
+			"projectName": "AI_e139adfb",
+			"args": "mundo_maze.txt 0.9 0.8 unknown"
 		},
 		{
 			"type": "java",
