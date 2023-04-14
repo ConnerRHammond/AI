@@ -1,34 +1,37 @@
 <template>
-	<div class="wrapper">
-		<div class="board">
-			<div @click="takeTurn(columnIndex)"
-				v-for="(column, columnIndex) in board[0]" 
-				:key="'col-' + columnIndex" class="column" 
-				:style="{left: columnIndex * 50 + 'px'}"></div>
-			<div class="row" v-for="(row, rowIndex) in board" :key="rowIndex">
-				<svg  
-					v-for="(column, columnIndex) in row" 
-					:key="columnIndex" 
-					width="50" 
-					height="50"
-					>
-						<circle 
-							:class="{
-								empty: column == 3, 
-								red: column == 0, 
-								yellow: column == 1
-							}" 
-							cx="25" 
-							cy="25" 
-							r="20"></circle>
-				</svg>
-			</div>
-		</div>  
+	<div>
+		<h3> {{player}}</h3>
+		<div class="wrapper">
+			<div class="board">
+				<div @click="takeTurn(columnIndex)"
+					v-for="(column, columnIndex) in board[0]" 
+					:key="'col-' + columnIndex" class="column" 
+					:style="{left: columnIndex * 50 + 'px'}"></div>
+				<div class="row" v-for="(row, rowIndex) in board" :key="rowIndex">
+					<svg  
+						v-for="(column, columnIndex) in row" 
+						:key="columnIndex" 
+						width="50" 
+						height="50"
+						>
+							<circle 
+								:class="{
+									empty: column == 0, 
+									red: column == 1, 
+									yellow: column == 2
+								}" 
+								cx="25" 
+								cy="25" 
+								r="20"></circle>
+					</svg>
+				</div>
+			</div> 
+		</div>
+	<input type="button" @click="newBoard" value="New Game">
 	</div>
-
   </template>
-  
   <script>
+    import * as connect4 from '@/connect4'
 	export default {
 		name: 'App',
 		components: {
@@ -36,49 +39,44 @@
 		data() {
 			return {
 				rowCount: 6,
-				gameBoard:[],
+				board:[],
+				player1: 0,
+				player2: 1,
+				red: 1,
+				yellow: 2,
 				turn: 0,
+				gameOver: false,
 
 			}
 		},
+		computed: {
+			player: function() {
+				if (this.gameOver) {
+					return 	this.turn % 2 == 1 ? 'Player 2 Won' : 'Player 1 Won';
+				}
+				return this.turn % 2 == 1 ? 'Player 2' : 'Player 1';
+
+			},
+		},
 		methods: {
-			isValidColumn: function(column) {
-				return this.gameBoard[0][column] == 3;
+			newBoard: function() {
+				this.board = connect4.createBoard();
+				this.turn = 0;
 			},
 			takeTurn: function(column) {
-				if (this.isValidColumn(column)) {
-					const row = this.getOpenRow(column);
-					this.dropPiece(row, column, this.turn);
-					this.turn = (this.turn + 1) % 2;
-					console.log(this.gameBoard);
-				}
-			},
-			createBoard: function() {
-				return [[3,3,3,3,3,3,3],
-						[3,3,3,3,3,3,3],
-						[3,3,3,3,3,3,3],
-						[3,3,3,3,3,3,3],
-						[3,3,3,3,3,3,3],
-						[3,3,3,3,3,3,3]]
-			},
-			getOpenRow: function(column) {
-				for(let row = this.rowCount - 1; row >= 0; row --) {
-					if (this.gameBoard[row][column] == 3) {
-						return row;
+				if (connect4.isValidColumn(this.board, column) && !this.gameOver) {
+					let row = connect4.getOpenRow(this.board, column);
+					let color = this.turn == this.player1 ? this.red: this.yellow;
+					connect4.dropPiece(this.board, row, column, color);
+					this.gameOver = connect4.isWinningMove(this.board, color);
+					if (!this.gameOver) {
+						this.turn = (this.turn + 1) % 2;
 					}
 				}
 			},
-			dropPiece: function(row, column, color) {
-				this.gameBoard[row][column] = color;
-			}
-		},
-		computed: {
-			board: function() {
-				return this.gameBoard;
-			}
 		},
 		created () {
-			this.gameBoard = this.createBoard();
+			this.board = connect4.createBoard();
 		}
 		}
 	</script>
@@ -100,13 +98,13 @@
     display: flex;
     justify-content: center;
   }
-  circle.empty {
+  .empty {
 	fill: #fff;
   }
-  circle.red {
+  .red {
 	fill: #d50000;
   }
-  circle.yellow {
+  .yellow {
 	fill: #dad400;
   }
   .column {
