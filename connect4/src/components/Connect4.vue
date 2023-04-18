@@ -46,7 +46,7 @@
 				yellow: 2,
 				turn: 0,
 				gameOver: false,
-
+				AI: 2,
 			}
 		},
 		computed: {
@@ -59,9 +59,27 @@
 			},
 		},
 		methods: {
+			selectBestColumn: function() {
+				let validColumns = connect4.getValidColumns(this.board);
+				let highestScore = -1000;
+				let column = Math.floor(Math.random * validColumns.length);
+				for (let i =0; i < validColumns.length; i++) {
+					let newColumn = validColumns[i];
+					let row = connect4.getOpenRow(this.board, newColumn);
+					let boardCopy = connect4.copyBoard(this.board);
+					connect4.dropPiece(boardCopy, row, newColumn, this.AI);
+					let newScore = connect4.boardScore(boardCopy, this.AI, this.player1);
+					if (newScore > highestScore) {
+						highestScore = newScore;
+						column = newColumn;
+					}
+				}
+				return column;
+			},
 			newBoard: function() {
 				this.board = connect4.createBoard();
 				this.turn = 0;
+				this.gameOver = false;
 			},
 			takeTurn: function(column) {
 				if (connect4.isValidColumn(this.board, column) && !this.gameOver) {
@@ -71,9 +89,19 @@
 					this.gameOver = connect4.isWinningMove(this.board, color);
 					if (!this.gameOver) {
 						this.turn = (this.turn + 1) % 2;
+						this.AITurn();
 					}
 				}
 			},
+			AITurn () {
+				let column = this.selectBestColumn();
+				let row = connect4.getOpenRow(this.board, column);
+				connect4.dropPiece(this.board, row, column, this.AI);
+				if (connect4.isWinningMove(this.board, this.yellow)) {
+					this.gameOver = true;
+				}
+				this.turn = (this.turn + 1) % 2;
+			}
 		},
 		created () {
 			this.board = connect4.createBoard();
