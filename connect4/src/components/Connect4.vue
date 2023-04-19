@@ -95,13 +95,16 @@ export default {
 			}
 		},
 		AITurn: function() {
-			let column = this.selectBestColumn();
+			// let column = this.selectBestColumn();
+			let result = connect4.minimax(this.board, 5, -Infinity, Infinity, true);
+			let column = result.column;
 			let row = connect4.getOpenRow(this.board, column);
 			connect4.dropPiece(this.board, row, column, this.yellow);
 			if (connect4.isWinningMove(this.board, this.yellow)) {
 				this.gameOver = true;
+			} else {
+				this.turn = (this.turn + 1) % 2;
 			}
-			this.turn = (this.turn + 1) % 2;
 		}
 	},
 	created () {

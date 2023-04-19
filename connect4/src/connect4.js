@@ -1,5 +1,8 @@
 const RowCount = 6;
 const ColumnCount = 7;
+const Yellow = 2;
+const Red = 1;
+const Empty = 0;
 
 function count (inputArray, item) {
     const map = inputArray.reduce((acc, key) => acc.set(key, (acc.get(key) || 0) + 1), new Map());
@@ -50,16 +53,94 @@ function getScore(section, color = 2, oppositeColor = 1) {
     if (count(section, color) == 4) {
         score += 100;
     }
-    if (count(section, color) == 3 && count(section, 0) == 1){
+    if (count(section, color) == 3 && count(section, Empty) == 1){
         score += 10;
     }
-    if (count(section, color) == 2 && count(section, 0) == 2){
+    if (count(section, color) == 2 && count(section, Empty) == 2){
         score += 5;
     }
-    if (count(section, oppositeColor) == 3 && count(section, 0) == 1){
+    if (count(section, oppositeColor) == 3 && count(section, Empty) == 1){
         score -= 80;
     }
     return score
+}
+
+export function minimax(board, depth, alpha, beta, maximizingPlayer) {
+    let isTerminal = isWinningMove(board, Red) || isWinningMove(board, Yellow) || getValidColumns(board).length == 0;
+    if (isTerminal || depth == 0) {
+        if (isTerminal) {
+            if (isWinningMove(board, Red)) {
+                return {
+                    score: -10000,
+                    column: undefined
+                };
+            }
+            if (isWinningMove(board, Yellow)) {
+                return {
+                    score: 10000,
+                    column: undefined
+                };
+            }
+            return {
+                score: 0,
+                column: undefined
+            };
+        } else {
+            return {
+                score: boardScore(board),
+                column: undefined
+            };
+        }
+    }
+
+    let validColumns = getValidColumns(board);
+    if (maximizingPlayer) {
+        let score = -Infinity;
+        let column = Math.floor(Math.random() * validColumns.length);
+        for (let i = 0; i < validColumns.length; i++) {
+            let newColumn = validColumns[i];
+            let row = getOpenRow(board, newColumn);
+            let boardCopy = copyBoard(board);
+            dropPiece(boardCopy, row, newColumn, Yellow);
+            let result = minimax(boardCopy, depth - 1, alpha, beta, false);
+            let newScore = result.score;
+            if (newScore > score) {
+                score = newScore;
+                column = newColumn;
+            }
+            alpha = Math.max(alpha, score);
+            if (alpha >= beta) {
+                break;
+            }
+        }
+        return {
+            score: score,
+            column: column
+        };
+    } else {
+        let score = Infinity;
+        let column = Math.floor(Math.random() * validColumns.length);
+        for (let i = 0; i < validColumns.length; i++) {
+            let newColumn = validColumns[i];
+            let row = getOpenRow(board, newColumn);
+            let boardCopy = copyBoard(board);
+            dropPiece(boardCopy, row, newColumn, Red);
+            let result = minimax(boardCopy, depth - 1, alpha, beta, true);
+            let newScore = result.score;
+            if (newScore < score) {
+                score = newScore;
+                column = newColumn;
+            }
+            beta = Math.min(beta, score);
+            if (alpha >= beta) {
+                break;
+            }
+        }
+        return {
+            score: score,
+            column: column
+        };
+    }
 }
 
 export function boardScore(gameBoard, color = 2) {
